@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ハムちゃんアルティメット</title>
+
 <style>
 body{
   margin:0;
@@ -32,6 +33,7 @@ button{
   border-radius:10px;
   background:#ff9ecf;
   color:white;
+  margin:5px;
 }
 </style>
 </head>
@@ -47,19 +49,43 @@ button{
 const SIZE=16;
 const SCALE=4;
 
-// ---------- ベースドット（2コマ）
-const frameA=[ ... ]; // ← 長くなるため下に定義
-const frameB=[ ... ]; // ← 下に定義
+// ===== 2コマドットデータ =====
 
-// ---------- 色生成
+// フレームA（足開き）
+const frameA=[
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+[0,0,0,1,1,2,2,2,2,2,1,1,0,0,0,0],
+[0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
+[0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+[0,1,2,2,2,3,2,2,2,3,2,2,2,1,0,0],
+[0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+[0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
+[0,0,0,1,2,2,2,2,2,2,2,1,0,0,0,0],
+[0,0,0,0,1,2,2,2,2,2,1,0,0,0,0,0],
+[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+[0,0,0,0,0,4,0,0,0,4,0,0,0,0,0,0],
+[0,0,0,0,4,0,0,0,0,0,4,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+// フレームB（足閉じ）
+const frameB=JSON.parse(JSON.stringify(frameA));
+frameB[12]=[0,0,0,0,0,0,4,0,0,4,0,0,0,0,0,0];
+
+// ===== カラー =====
 function randomColor(){
-  const colors=["#d8a45c","#cfa76e","#a67c52","#e0b07a",
-                "#ffcc66","#ff99aa","#aaddff","#ccffcc",
-                "#ffddaa","#d0a0ff","#ffaaaa","#aaaaff"];
+  const colors=[
+    "#d8a45c","#cfa76e","#a67c52","#e0b07a",
+    "#ffcc66","#ff99aa","#aaddff","#ccffcc",
+    "#ffddaa","#d0a0ff","#ffaaaa","#aaaaff"
+  ];
   return colors[Math.floor(Math.random()*colors.length)];
 }
 
-// ---------- キャンバス生成
+// ===== キャンバス生成 =====
 function createCanvas(){
   const c=document.createElement("canvas");
   c.width=SIZE;
@@ -69,7 +95,7 @@ function createCanvas(){
   return c;
 }
 
-// ---------- 描画
+// ===== 描画 =====
 function draw(ctx,data,bodyColor,isRare,stumble){
   ctx.clearRect(0,0,SIZE,SIZE);
 
@@ -102,7 +128,7 @@ function draw(ctx,data,bodyColor,isRare,stumble){
   if(stumble) ctx.restore();
 }
 
-// ---------- レース管理
+// ===== レース =====
 let racers=[];
 let raceInterval;
 let animInterval;
@@ -119,17 +145,17 @@ function startRace(){
     const track=document.createElement("div");
     track.className="track";
 
-    const c=createCanvas();
-    const ctx=c.getContext("2d");
+    const canvas=createCanvas();
+    const ctx=canvas.getContext("2d");
 
     const isRare=Math.random()<0.1;
     const bodyColor=isRare?"gold":randomColor();
 
-    track.appendChild(c);
+    track.appendChild(canvas);
     document.getElementById("tracks").appendChild(track);
 
     racers.push({
-      canvas:c,
+      canvas,
       ctx,
       pos:0,
       speed:1+Math.random()*2,
@@ -151,7 +177,6 @@ function updateRace(){
   racers.forEach(r=>{
     if(r.finished) return;
 
-    // 転倒確率
     if(Math.random()<0.02){
       r.stumble=true;
       r.stumbleTimer=10;
@@ -169,19 +194,16 @@ function updateRace(){
 
     if(r.pos>window.innerWidth*0.75){
       r.finished=true;
+      r.canvas.style.top="10px";
     }
   });
 
-  boostPower*=0.9; // 徐々に減衰
+  boostPower*=0.9;
 }
 
 function updateAnim(){
   racers.forEach(r=>{
-    if(r.finished){
-      r.canvas.style.top="10px"; // 勝利ジャンプ
-      return;
-    }
-
+    if(r.finished) return;
     r.frame=r.frame===0?1:0;
     draw(r.ctx,r.frame===0?frameA:frameB,r.bodyColor,r.isRare,r.stumble);
   });
@@ -190,31 +212,7 @@ function updateAnim(){
 function boost(){
   boostPower+=2;
 }
-
-// ---------- フレーム定義（下部）
-const baseFrame=[
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
-[0,0,0,1,1,2,2,2,2,2,1,1,0,0,0,0],
-[0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
-[0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
-[0,1,2,2,2,3,2,2,2,3,2,2,2,1,0,0],
-[0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
-[0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
-[0,0,0,1,2,2,2,2,2,2,2,1,0,0,0,0],
-[0,0,0,0,1,2,2,2,2,2,1,0,0,0,0,0],
-[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
-[0,0,0,0,0,4,0,0,0,4,0,0,0,0,0,0],
-[0,0,0,0,4,0,0,0,0,0,4,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-];
-
-frameA=baseFrame;
-frameB=JSON.parse(JSON.stringify(baseFrame));
-frameB[12]=[0,0,0,0,0,0,4,0,0,4,0,0,0,0,0,0];
-
 </script>
+
 </body>
 </html>
