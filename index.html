@@ -3,184 +3,218 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-
-<title>ハムちゃんダッシュDX</title>
-
+<title>ハムちゃんアルティメット</title>
 <style>
 body{
   margin:0;
-  font-family:sans-serif;
-  background:linear-gradient(#ffeef5,#ffd6e7);
+  background:#ffd6e7;
   text-align:center;
-  touch-action:manipulation;
+  font-family:sans-serif;
+  overflow:hidden;
 }
-
-h1{font-size:6vw;}
-
-button,input{
-  font-size:4vw;
-  padding:6px;
-  border-radius:12px;
-  border:none;
-  margin:5px;
-}
-
 .track{
   position:relative;
   width:95vw;
-  height:16vh;
+  height:130px;
   background:white;
-  margin:8px auto;
+  margin:12px auto;
   border-radius:15px;
-  overflow:hidden;
 }
-
-.hamster{
+canvas{
   position:absolute;
-  left:0;
-  top:50%;
-  transform:translateY(-50%);
-  width:64px;
-  height:64px;
-  background-image:url("hamsters.png");
-  background-size:200% 500%;
+  top:30px;
   image-rendering:pixelated;
 }
-
-.goal{
-  position:absolute;
-  right:5px;
-  top:5px;
-  font-size:4vw;
-}
-
-#selector img{
-  width:60px;
-  margin:5px;
-  image-rendering:pixelated;
-  border:3px solid transparent;
+button{
+  font-size:18px;
+  padding:8px 14px;
+  border:none;
   border-radius:10px;
-}
-
-.selected{
-  border:3px solid hotpink !important;
+  background:#ff9ecf;
+  color:white;
 }
 </style>
 </head>
 <body>
 
-<h1>🐹 ハムちゃんダッシュDX</h1>
-
-<div>
-  名前：
-  <input id="playerName" value="もちまる">
-</div>
-
-<h3>ハムスターを選んでね</h3>
-<div id="selector"></div>
-
+<h2>🐹 ハムちゃんアルティメット</h2>
 <button onclick="startRace()">レース開始</button>
+<button onclick="boost()">💨 ブースト！</button>
 
 <div id="tracks"></div>
-<h2 id="result"></h2>
 
 <script>
-const cols=2;
-const rows=5;
-let selectedIndex=0;
-let racers=[];
-let raceInterval;
-let raceFinished=false;
+const SIZE=16;
+const SCALE=4;
 
-function createSelector(){
-  const selector=document.getElementById("selector");
-  for(let i=0;i<10;i++){
-    let img=document.createElement("div");
-    img.style.width="60px";
-    img.style.height="60px";
-    img.style.display="inline-block";
-    img.style.backgroundImage="url(hamsters.png)";
-    img.style.backgroundSize="200% 500%";
-    img.style.imageRendering="pixelated";
+// ---------- ベースドット（2コマ）
+const frameA=[ ... ]; // ← 長くなるため下に定義
+const frameB=[ ... ]; // ← 下に定義
 
-    let x=i%2;
-    let y=Math.floor(i/2);
-
-    img.style.backgroundPosition=`${x*100}% ${y*25}%`;
-
-    img.onclick=()=>{
-      selectedIndex=i;
-      document.querySelectorAll("#selector div").forEach(d=>d.classList.remove("selected"));
-      img.classList.add("selected");
-    };
-
-    selector.appendChild(img);
-  }
+// ---------- 色生成
+function randomColor(){
+  const colors=["#d8a45c","#cfa76e","#a67c52","#e0b07a",
+                "#ffcc66","#ff99aa","#aaddff","#ccffcc",
+                "#ffddaa","#d0a0ff","#ffaaaa","#aaaaff"];
+  return colors[Math.floor(Math.random()*colors.length)];
 }
 
-createSelector();
+// ---------- キャンバス生成
+function createCanvas(){
+  const c=document.createElement("canvas");
+  c.width=SIZE;
+  c.height=SIZE;
+  c.style.width=(SIZE*SCALE)+"px";
+  c.style.height=(SIZE*SCALE)+"px";
+  return c;
+}
 
-function startRace(){
-  raceFinished=false;
-  clearInterval(raceInterval);
-  document.getElementById("tracks").innerHTML="";
-  document.getElementById("result").textContent="";
-  racers=[];
+// ---------- 描画
+function draw(ctx,data,bodyColor,isRare,stumble){
+  ctx.clearRect(0,0,SIZE,SIZE);
 
-  let name=document.getElementById("playerName").value||"あなた";
-
-  for(let i=0;i<3;i++){
-    let track=document.createElement("div");
-    track.className="track";
-
-    let hamster=document.createElement("div");
-    hamster.className="hamster";
-
-    let index=i===0?selectedIndex:Math.floor(Math.random()*10);
-    let x=index%2;
-    let y=Math.floor(index/2);
-
-    hamster.style.backgroundPosition=`${x*100}% ${y*25}%`;
-
-    let goal=document.createElement("div");
-    goal.className="goal";
-    goal.textContent="🏁";
-
-    track.appendChild(goal);
-    track.appendChild(hamster);
-    document.getElementById("tracks").appendChild(track);
-
-    racers.push({el:hamster,pos:0,isPlayer:i===0,name:name});
+  if(stumble){
+    ctx.save();
+    ctx.translate(8,8);
+    ctx.rotate(Math.PI/2);
+    ctx.translate(-8,-8);
   }
 
-  raceInterval=setInterval(updateRace,100);
+  for(let y=0;y<SIZE;y++){
+    for(let x=0;x<SIZE;x++){
+      let p=data[y][x];
+      if(p===0) continue;
+      let color;
+      if(p===1) color=bodyColor;
+      if(p===2) color="#fff4dc";
+      if(p===3) color="#ffb6c1";
+      if(p===4) color="#000";
+      ctx.fillStyle=color;
+      ctx.fillRect(x,y,1,1);
+    }
+  }
+
+  if(isRare){
+    ctx.fillStyle="yellow";
+    ctx.fillRect(Math.random()*16,Math.random()*16,1,1);
+  }
+
+  if(stumble) ctx.restore();
+}
+
+// ---------- レース管理
+let racers=[];
+let raceInterval;
+let animInterval;
+let boostPower=0;
+
+function startRace(){
+  clearInterval(raceInterval);
+  clearInterval(animInterval);
+  document.getElementById("tracks").innerHTML="";
+  racers=[];
+  boostPower=0;
+
+  for(let i=0;i<4;i++){
+    const track=document.createElement("div");
+    track.className="track";
+
+    const c=createCanvas();
+    const ctx=c.getContext("2d");
+
+    const isRare=Math.random()<0.1;
+    const bodyColor=isRare?"gold":randomColor();
+
+    track.appendChild(c);
+    document.getElementById("tracks").appendChild(track);
+
+    racers.push({
+      canvas:c,
+      ctx,
+      pos:0,
+      speed:1+Math.random()*2,
+      frame:0,
+      stumble:false,
+      stumbleTimer:0,
+      finished:false,
+      bodyColor,
+      isRare,
+      isPlayer:i===0
+    });
+  }
+
+  raceInterval=setInterval(updateRace,80);
+  animInterval=setInterval(updateAnim,150);
 }
 
 function updateRace(){
   racers.forEach(r=>{
-    if(raceFinished)return;
+    if(r.finished) return;
 
-    r.pos+=Math.random()*5;
-    r.el.style.left=r.pos+"px";
-
-    if(r.pos>window.innerWidth*0.7){
-      finish(r);
+    // 転倒確率
+    if(Math.random()<0.02){
+      r.stumble=true;
+      r.stumbleTimer=10;
     }
+
+    if(r.stumble){
+      r.stumbleTimer--;
+      if(r.stumbleTimer<=0) r.stumble=false;
+      return;
+    }
+
+    let accel=r.speed + (r.isPlayer?boostPower:0);
+    r.pos+=accel;
+    r.canvas.style.left=r.pos+"px";
+
+    if(r.pos>window.innerWidth*0.75){
+      r.finished=true;
+    }
+  });
+
+  boostPower*=0.9; // 徐々に減衰
+}
+
+function updateAnim(){
+  racers.forEach(r=>{
+    if(r.finished){
+      r.canvas.style.top="10px"; // 勝利ジャンプ
+      return;
+    }
+
+    r.frame=r.frame===0?1:0;
+    draw(r.ctx,r.frame===0?frameA:frameB,r.bodyColor,r.isRare,r.stumble);
   });
 }
 
-function finish(winner){
-  raceFinished=true;
-  clearInterval(raceInterval);
-
-  if(winner.isPlayer){
-    document.getElementById("result").textContent="🎉 勝利！";
-  }else{
-    document.getElementById("result").textContent="💦 負けちゃった…";
-  }
+function boost(){
+  boostPower+=2;
 }
-</script>
 
+// ---------- フレーム定義（下部）
+const baseFrame=[
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+[0,0,0,1,1,2,2,2,2,2,1,1,0,0,0,0],
+[0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
+[0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+[0,1,2,2,2,3,2,2,2,3,2,2,2,1,0,0],
+[0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+[0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
+[0,0,0,1,2,2,2,2,2,2,2,1,0,0,0,0],
+[0,0,0,0,1,2,2,2,2,2,1,0,0,0,0,0],
+[0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+[0,0,0,0,0,4,0,0,0,4,0,0,0,0,0,0],
+[0,0,0,0,4,0,0,0,0,0,4,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+frameA=baseFrame;
+frameB=JSON.parse(JSON.stringify(baseFrame));
+frameB[12]=[0,0,0,0,0,0,4,0,0,4,0,0,0,0,0,0];
+
+</script>
 </body>
 </html>
