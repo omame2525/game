@@ -3,30 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hamster Canvas</title>
-    <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
-        canvas { border: 1px solid #000; }
-    </style>
+    <title>Game</title>
 </head>
 <body>
-    <canvas id="hamsterCanvas"></canvas>
-    <script>
-        const SIZE = 32; // Update size for the new sprite dimensions
-        const SCALE = 1;  // Adjust scale if needed for more detailed drawing
-
-        const canvas = document.getElementById('hamsterCanvas');
-        canvas.width = SIZE * SCALE;
-        canvas.height = SIZE * SCALE;
-        const context = canvas.getContext('2d');
-
-        const hamsterImage = new Image();
-        hamsterImage.src = 'path/to/new/hamster-sprite.png'; // Update to the new hamster sprite path
-
-        hamsterImage.onload = function() {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            context.drawImage(hamsterImage, 0, 0, SIZE, SIZE, 0, 0, SIZE * SCALE, SIZE * SCALE);
-        };
-    </script>
+    <h1>Welcome to the Game</h1>
+    <p>This is the index page of the game.</p>
 </body>
 </html>
