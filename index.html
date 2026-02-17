@@ -3,173 +3,201 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>タッチハンター</title>
-
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#222">
+<title>ハムちゃんダッシュ</title>
 
 <style>
 body {
   margin: 0;
   font-family: sans-serif;
-  background: #222;
-  color: white;
+  background: linear-gradient(#ffeef5, #ffd6e7);
   text-align: center;
 }
 
-h1 { font-size: 6vw; margin: 10px; }
+h1 {
+  font-size: 6vw;
+  margin: 10px;
+}
 
-#info {
-  display: flex;
-  justify-content: space-around;
+#nameInput {
   font-size: 4vw;
-  margin-bottom: 10px;
-}
-
-#gameArea {
-  position: relative;
-  width: 95vw;
-  height: 60vh;
-  margin: auto;
-  background: #fff;
+  padding: 5px;
   border-radius: 10px;
-  overflow: hidden;
-}
-
-.target {
-  position: absolute;
-  width: 14vw;
-  height: 14vw;
-  background: crimson;
-  border-radius: 50%;
+  border: none;
 }
 
 button {
-  font-size: 5vw;
-  padding: 10px 20px;
-  margin: 10px;
-  border-radius: 10px;
+  font-size: 4vw;
+  padding: 8px 15px;
+  border-radius: 15px;
   border: none;
+  background: #ff9ecf;
+  color: white;
+  margin: 5px;
+}
+
+.track {
+  position: relative;
+  width: 95vw;
+  height: 18vh;
+  background: white;
+  margin: 10px auto;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.hamster {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8vw;
+}
+
+.nameTag {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 3vw;
+}
+
+.goal {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  font-size: 4vw;
 }
 </style>
 </head>
 <body>
 
-<h1>🎯 タッチハンター</h1>
-
-<div id="info">
-  <div>スコア: <span id="score">0</span></div>
-  <div>残り: <span id="time">30</span></div>
-  <div>Lv: <span id="level">1</span></div>
-</div>
-
-<div id="gameArea"></div>
+<h1>🐹 ハムちゃんダッシュ 💨</h1>
 
 <div>
-  <button onclick="startGame()">スタート</button>
+  あなたの名前：
+  <input id="playerName" value="もちまる">
+  <button onclick="startRace()">レース開始</button>
 </div>
 
-<div>🏆 ハイスコア: <span id="highScore">0</span></div>
+<div id="tracks"></div>
+
+<div>
+  <button onclick="boost()">💗 タップで応援！</button>
+</div>
+
+<h2 id="result"></h2>
 
 <script>
-let score = 0;
-let time = 30;
-let level = 1;
-let spawnSpeed = 1000;
-let gameInterval;
-let timerInterval;
+const cpuNames = [
+"もふりん","くるみ","ぽてち","ちょこ","いちご","ぷりん","みるく",
+"まろん","きなこ","あんず","ふわり","ころん","もこたん","ぽぽ",
+"るる","ぴの","ちゃむ","ころまる","しゅがー","ぴょこ"
+];
 
-const hitSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+const personalities = [
+  {name:"のんびり", speed:1.5, stumble:0.05},
+  {name:"あわてんぼう", speed:2.5, stumble:0.15},
+  {name:"きまぐれ", speed:2.0, stumble:0.10},
+  {name:"てんさい", speed:3.0, stumble:0.03}
+];
 
-document.getElementById("highScore").textContent =
-  localStorage.getItem("highScore") || 0;
+let racers = [];
+let raceInterval;
+let raceFinished = false;
 
-function startGame() {
-  score = 0;
-  time = 30;
-  level = 1;
-  spawnSpeed = 1000;
-
-  updateUI();
-
-  clearInterval(gameInterval);
-  clearInterval(timerInterval);
-
-  gameInterval = setInterval(createTarget, spawnSpeed);
-  timerInterval = setInterval(countDown, 1000);
+function randomItem(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
 }
 
-function countDown() {
-  time--;
-  document.getElementById("time").textContent = time;
+function startRace(){
+  document.getElementById("result").textContent="";
+  raceFinished = false;
+  clearInterval(raceInterval);
+  document.getElementById("tracks").innerHTML="";
+  racers=[];
 
-  if (time <= 0) {
-    endGame();
-  }
-}
+  let playerName = document.getElementById("playerName").value || "あなた";
+  let usedNames=[playerName];
 
-function createTarget() {
-  const gameArea = document.getElementById("gameArea");
-  const target = document.createElement("div");
-  target.className = "target";
-
-  const size = gameArea.clientWidth * 0.14;
-  const maxX = gameArea.clientWidth - size;
-  const maxY = gameArea.clientHeight - size;
-
-  target.style.left = Math.random() * maxX + "px";
-  target.style.top = Math.random() * maxY + "px";
-
-  target.addEventListener("touchstart", hit);
-  target.addEventListener("click", hit);
-
-  gameArea.appendChild(target);
-
-  setTimeout(() => {
-    if (gameArea.contains(target)) {
-      gameArea.removeChild(target);
+  for(let i=0;i<3;i++){
+    let name;
+    if(i===0){
+      name = playerName;
+    } else {
+      do{
+        name = randomItem(cpuNames);
+      } while(usedNames.includes(name));
     }
-  }, spawnSpeed - 200);
-}
+    usedNames.push(name);
 
-function hit(e) {
-  e.preventDefault();
-  score++;
-  hitSound.play();
-  this.remove();
+    let personality = randomItem(personalities);
 
-  if (score % 10 === 0) {
-    level++;
-    spawnSpeed *= 0.85;
-    clearInterval(gameInterval);
-    gameInterval = setInterval(createTarget, spawnSpeed);
+    let track = document.createElement("div");
+    track.className="track";
+
+    let nameTag = document.createElement("div");
+    nameTag.className="nameTag";
+    nameTag.textContent = name + "（"+personality.name+"）";
+
+    let hamster = document.createElement("div");
+    hamster.className="hamster";
+    hamster.textContent="🐹";
+
+    let goal = document.createElement("div");
+    goal.className="goal";
+    goal.textContent="🏁";
+
+    track.appendChild(nameTag);
+    track.appendChild(goal);
+    track.appendChild(hamster);
+    document.getElementById("tracks").appendChild(track);
+
+    racers.push({
+      name:name,
+      personality:personality,
+      element:hamster,
+      position:0,
+      isPlayer:i===0
+    });
   }
 
-  updateUI();
+  raceInterval = setInterval(updateRace,100);
 }
 
-function updateUI() {
-  document.getElementById("score").textContent = score;
-  document.getElementById("level").textContent = level;
+function updateRace(){
+  racers.forEach(r=>{
+    if(raceFinished) return;
+
+    if(!r.isPlayer){
+      if(Math.random()<r.personality.stumble){
+        return; // 転ぶ
+      }
+      r.position += r.personality.speed * Math.random();
+    }
+
+    r.element.style.left = r.position + "px";
+
+    if(r.position > window.innerWidth*0.75){
+      finishRace(r.name);
+    }
+  });
 }
 
-function endGame() {
-  clearInterval(gameInterval);
-  clearInterval(timerInterval);
+function boost(){
+  if(raceFinished) return;
+  let player = racers[0];
+  player.position += 8;
+  player.element.style.left = player.position + "px";
+}
 
-  const highScore = localStorage.getItem("highScore") || 0;
+function finishRace(winner){
+  raceFinished = true;
+  clearInterval(raceInterval);
 
-  if (score > highScore) {
-    localStorage.setItem("highScore", score);
-    document.getElementById("highScore").textContent = score;
-    alert("🎉 新記録！");
+  if(winner === racers[0].name){
+    document.getElementById("result").textContent="🎉 あなたの勝ち！";
   } else {
-    alert("ゲーム終了！");
+    document.getElementById("result").textContent="💦 "+winner+" の勝ち！";
   }
-}
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
 }
 </script>
 
