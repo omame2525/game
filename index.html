@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<title>ハムちゃんダッシュDX</title>
+
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:linear-gradient(#ffeef5,#ffd6e7);
+  text-align:center;
+  touch-action:manipulation;
+}
+
+h1{font-size:6vw;}
+
+button,input{
+  font-size:4vw;
+  padding:6px;
+  border-radius:12px;
+  border:none;
+  margin:5px;
+}
+
+.track{
+  position:relative;
+  width:95vw;
+  height:16vh;
+  background:white;
+  margin:8px auto;
+  border-radius:15px;
+  overflow:hidden;
+}
+
+.hamster{
+  position:absolute;
+  left:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:64px;
+  height:64px;
+  background-image:url("hamsters.png");
+  background-size:200% 500%;
+  image-rendering:pixelated;
+}
+
+.goal{
+  position:absolute;
+  right:5px;
+  top:5px;
+  font-size:4vw;
+}
+
+#selector img{
+  width:60px;
+  margin:5px;
+  image-rendering:pixelated;
+  border:3px solid transparent;
+  border-radius:10px;
+}
+
+.selected{
+  border:3px solid hotpink !important;
+}
+</style>
+</head>
+<body>
+
+<h1>🐹 ハムちゃんダッシュDX</h1>
+
+<div>
+  名前：
+  <input id="playerName" value="もちまる">
+</div>
+
+<h3>ハムスターを選んでね</h3>
+<div id="selector"></div>
+
+<button onclick="startRace()">レース開始</button>
+
+<div id="tracks"></div>
+<h2 id="result"></h2>
+
+<script>
+const cols=2;
+const rows=5;
+let selectedIndex=0;
+let racers=[];
+let raceInterval;
+let raceFinished=false;
+
+function createSelector(){
+  const selector=document.getElementById("selector");
+  for(let i=0;i<10;i++){
+    let img=document.createElement("div");
+    img.style.width="60px";
+    img.style.height="60px";
+    img.style.display="inline-block";
+    img.style.backgroundImage="url(hamsters.png)";
+    img.style.backgroundSize="200% 500%";
+    img.style.imageRendering="pixelated";
+
+    let x=i%2;
+    let y=Math.floor(i/2);
+
+    img.style.backgroundPosition=`${x*100}% ${y*25}%`;
+
+    img.onclick=()=>{
+      selectedIndex=i;
+      document.querySelectorAll("#selector div").forEach(d=>d.classList.remove("selected"));
+      img.classList.add("selected");
+    };
+
+    selector.appendChild(img);
+  }
+}
+
+createSelector();
+
+function startRace(){
+  raceFinished=false;
+  clearInterval(raceInterval);
+  document.getElementById("tracks").innerHTML="";
+  document.getElementById("result").textContent="";
+  racers=[];
+
+  let name=document.getElementById("playerName").value||"あなた";
+
+  for(let i=0;i<3;i++){
+    let track=document.createElement("div");
+    track.className="track";
+
+    let hamster=document.createElement("div");
+    hamster.className="hamster";
+
+    let index=i===0?selectedIndex:Math.floor(Math.random()*10);
+    let x=index%2;
+    let y=Math.floor(index/2);
+
+    hamster.style.backgroundPosition=`${x*100}% ${y*25}%`;
+
+    let goal=document.createElement("div");
+    goal.className="goal";
+    goal.textContent="🏁";
+
+    track.appendChild(goal);
+    track.appendChild(hamster);
+    document.getElementById("tracks").appendChild(track);
+
+    racers.push({el:hamster,pos:0,isPlayer:i===0,name:name});
+  }
+
+  raceInterval=setInterval(updateRace,100);
+}
+
+function updateRace(){
+  racers.forEach(r=>{
+    if(raceFinished)return;
+
+    r.pos+=Math.random()*5;
+    r.el.style.left=r.pos+"px";
+
+    if(r.pos>window.innerWidth*0.7){
+      finish(r);
+    }
+  });
+}
+
+function finish(winner){
+  raceFinished=true;
+  clearInterval(raceInterval);
+
+  if(winner.isPlayer){
+    document.getElementById("result").textContent="🎉 勝利！";
+  }else{
+    document.getElementById("result").textContent="💦 負けちゃった…";
+  }
+}
+</script>
+
+</body>
+</html>
