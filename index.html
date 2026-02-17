@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハムちゃんダッシュDX</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: linear-gradient(#ffeef5, #ffd6e7);
+  text-align: center;
+}
+
+h1 { font-size: 6vw; margin: 10px; }
+
+input, button {
+  font-size: 4vw;
+  padding: 6px;
+  border-radius: 12px;
+  border: none;
+  margin: 5px;
+}
+
+button { background: #ff9ecf; color: white; }
+
+.track {
+  position: relative;
+  width: 95vw;
+  height: 16vh;
+  background: white;
+  margin: 8px auto;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.hamster {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8vw;
+  transition: transform 0.2s;
+}
+
+.jump {
+  animation: jump 0.4s ease;
+}
+
+@keyframes jump {
+  0%{transform:translateY(-50%)}
+  50%{transform:translateY(-80%)}
+  100%{transform:translateY(-50%)}
+}
+
+.nameTag {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  font-size: 3vw;
+}
+
+.goal {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  font-size: 4vw;
+}
+</style>
+</head>
+<body>
+
+<h1>🐹 ハムちゃんダッシュDX 💨</h1>
+
+<div>
+  名前：
+  <input id="playerName" value="もちまる">
+  <button onclick="startRace()">レース開始</button>
+</div>
+
+<div>💰 コイン: <span id="coins">0</span>
+<button onclick="upgrade()">スピード強化 (10)</button>
+</div>
+
+<div id="tracks"></div>
+
+<div>
+  <button onclick="boost()">💗 タップ応援！</button>
+</div>
+
+<h2 id="result"></h2>
+
+<script>
+const cpuNames=["もふりん","くるみ","ぽてち","ちょこ","いちご","ぷりん","みるく","まろん","きなこ","あんず","ふわり","ころん","もこたん","ぽぽ","るる","ぴの","ちゃむ","ころまる","しゅがー","ぴょこ"];
+
+const personalities=[
+{name:"のんびり",speed:1.5,stumble:0.05},
+{name:"あわてんぼう",speed:2.5,stumble:0.15},
+{name:"きまぐれ",speed:2.0,stumble:0.10},
+{name:"てんさい",speed:3.0,stumble:0.03}
+];
+
+let racers=[];
+let raceInterval;
+let raceFinished=false;
+let coins=parseInt(localStorage.getItem("coins"))||0;
+let playerBoost=8;
+
+document.getElementById("coins").textContent=coins;
+
+function randomItem(a){return a[Math.floor(Math.random()*a.length)];}
+
+function startRace(){
+  raceFinished=false;
+  clearInterval(raceInterval);
+  document.getElementById("tracks").innerHTML="";
+  document.getElementById("result").textContent="";
+  racers=[];
+
+  let playerName=document.getElementById("playerName").value||"あなた";
+  let used=[playerName];
+
+  for(let i=0;i<3;i++){
+    let name=i===0?playerName:randomItem(cpuNames.filter(n=>!used.includes(n)));
+    used.push(name);
+    let p=randomItem(personalities);
+
+    let track=document.createElement("div");
+    track.className="track";
+
+    let tag=document.createElement("div");
+    tag.className="nameTag";
+    tag.textContent=name+"（"+p.name+"）";
+
+    let ham=document.createElement("div");
+    ham.className="hamster";
+    ham.textContent="🐹";
+
+    let goal=document.createElement("div");
+    goal.className="goal";
+    goal.textContent="🏁";
+
+    track.appendChild(tag);
+    track.appendChild(goal);
+    track.appendChild(ham);
+    document.getElementById("tracks").appendChild(track);
+
+    racers.push({name:name,personality:p,element:ham,pos:0,isPlayer:i===0});
+  }
+
+  raceInterval=setInterval(updateRace,100);
+}
+
+function updateRace(){
+  racers.forEach(r=>{
+    if(raceFinished) return;
+
+    if(!r.isPlayer){
+      if(Math.random()<r.personality.stumble){
+        showStumble(r.element);
+        return;
+      }
+      r.pos+=r.personality.speed*Math.random();
+    }
+
+    r.element.style.left=r.pos+"px";
+
+    if(r.pos>window.innerWidth*0.75){
+      finish(r);
+    }
+  });
+}
+
+function boost(){
+  if(raceFinished) return;
+  let p=racers[0];
+  p.pos+=playerBoost;
+  p.element.style.left=p.pos+"px";
+}
+
+function showStumble(el){
+  el.textContent="💫";
+  setTimeout(()=>{el.textContent="🐹"},300);
+}
+
+function finish(winner){
+  raceFinished=true;
+  clearInterval(raceInterval);
+
+  if(winner.isPlayer){
+    coins+=5;
+    localStorage.setItem("coins",coins);
+    document.getElementById("coins").textContent=coins;
+    document.getElementById("result").textContent="🎉 勝利！+5コイン";
+    winner.element.classList.add("jump");
+  }else{
+    document.getElementById("result").textContent="💦 "+winner.name+" の勝ち";
+  }
+}
+
+function upgrade(){
+  if(coins>=10){
+    coins-=10;
+    playerBoost+=2;
+    localStorage.setItem("coins",coins);
+    document.getElementById("coins").textContent=coins;
+    alert("スピードアップ！");
+  }
+}
+</script>
+
+</body>
+</html>
