@@ -4,196 +4,104 @@
 <meta charset="UTF-8">
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>ハムちゃんダッシュ育成版</title>
-
+<title>ハムちゃんダッシュ32</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
-
 <style>
-body{
-  margin:0;
-  background:#ffd6e7;
-  text-align:center;
-  font-family:sans-serif;
-  overflow:hidden;
-}
-.track{
-  position:relative;
-  width:95vw;
-  height:110px;
-  background:white;
-  margin:10px auto;
-  border-radius:15px;
-}
-canvas{
-  position:absolute;
-  top:30px;
-  image-rendering:pixelated;
-}
-button,input{
-  font-size:16px;
-  padding:6px;
-  margin:4px;
-  border-radius:8px;
-  border:none;
-}
-button{ background:#ff9ecf;color:white; }
-#status{ font-weight:bold;margin:5px; }
-#result{ font-size:20px;font-weight:bold;margin-top:10px; }
+body{margin:0;background:#ffd6e7;text-align:center;font-family:sans-serif;overflow:hidden;}
+.track{position:relative;width:95vw;height:160px;background:white;margin:10px auto;border-radius:15px;}
+canvas{position:absolute;top:30px;image-rendering:pixelated;}
+button,input{font-size:16px;padding:6px;margin:4px;border-radius:8px;border:none;}
+button{background:#ff9ecf;color:white;}
+#status{font-weight:bold;margin:5px;}
+#result{font-size:20px;font-weight:bold;margin-top:10px;}
 </style>
 </head>
 <body>
-
-<h2>🐹 ハムちゃんダッシュ育成版</h2>
-
+<h2>🐹 ハムちゃんダッシュ32</h2>
 <div id="status"></div>
-
 <input id="playerName" placeholder="自分のハムスター名">
 <button onclick="startRace()">レース開始</button>
 <button onclick="boost()">💨 ブースト！</button>
-
 <div id="tracks"></div>
 <div id="result"></div>
 
 <script>
 // ===== 効果音 =====
-const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playBeep(freq,duration){
-  const osc=audioCtx.createOscillator();
-  const gain=audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.frequency.value=freq;
-  osc.type="square";
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.frequency.value = freq; osc.type = "square";
   osc.start();
   gain.gain.setValueAtTime(0.1,audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration);
+  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime + duration);
   osc.stop(audioCtx.currentTime+duration);
 }
 
 // ===== 育成データ =====
-let playerData={
-  level:1,
-  exp:0
-};
+let playerData={level:1,exp:0};
+function loadData(){const saved=localStorage.getItem("hamsterSave");if(saved)playerData=JSON.parse(saved);}
+function saveData(){localStorage.setItem("hamsterSave",JSON.stringify(playerData));}
+function updateStatus(){document.getElementById("status").innerText="Lv."+playerData.level+" EXP:"+playerData.exp+"/100";}
+loadData(); updateStatus();
 
-function loadData(){
-  const saved=localStorage.getItem("hamsterSave");
-  if(saved) playerData=JSON.parse(saved);
-}
-function saveData(){
-  localStorage.setItem("hamsterSave",JSON.stringify(playerData));
-}
-function updateStatus(){
-  document.getElementById("status").innerText=
-    "Lv."+playerData.level+" EXP:"+playerData.exp+"/100";
-}
+// ===== 32×32ドットハムスター =====
+const SIZE = 32;
+const SCALE = 4;
 
-loadData();
-updateStatus();
+// frameA 足開き（簡易32×32）
+const frameA = Array(SIZE).fill(0).map(()=>Array(SIZE).fill(0));
+for(let y=8;y<16;y++){for(let x=12;x<20;x++){frameA[y][x]=1;}} // 体
+frameA[6][14]=3; frameA[6][17]=3; // 目
+frameA[5][13]=2; frameA[5][18]=2; // ほっぺ
+frameA[4][12]=4; frameA[4][19]=4; // 耳
+frameA[16][14]=1; frameA[16][17]=1; // 足
 
-// ===== ドット =====
-const SIZE=11;
-const SCALE=6;
+// frameB 足閉じ
+const frameB = JSON.parse(JSON.stringify(frameA));
+frameB[16][14]=0; frameB[16][17]=0;
 
-const frameA=[
-[0,0,0,1,1,1,1,1,0,0,0],
-[0,0,1,2,2,2,2,2,1,0,0],
-[0,1,2,2,2,2,2,2,2,1,0],
-[1,2,2,3,2,2,2,3,2,2,1],
-[1,2,2,2,2,2,2,2,2,2,1],
-[0,1,2,2,2,2,2,2,2,1,0],
-[0,0,1,2,2,2,2,2,1,0,0],
-[0,0,0,1,2,2,2,1,0,0,0],
-[0,0,0,0,1,1,1,0,0,0,0],
-[0,0,0,4,0,0,0,4,0,0,0],
-[0,0,4,0,0,0,0,0,4,0,0]
-];
-
-const frameB=JSON.parse(JSON.stringify(frameA));
-frameB[9]=[0,0,0,0,4,0,4,0,0,0,0];
-frameB[10]=[0,0,0,0,0,0,0,0,0,0,0];
-
+// CPU名前と性格
 const cpuNames=["もふりん","くるみ","ぽてち","しらたま"];
-
 const personalities=[
-{name:"スピード型",speed:2.8,stumble:0.04},
-{name:"安定型",speed:2.2,stumble:0.01},
-{name:"おっちょこちょい",speed:3.2,stumble:0.07},
-{name:"のんびり",speed:1.8,stumble:0.005}
+  {name:"スピード型",speed:2.8,stumble:0.04},
+  {name:"安定型",speed:2.2,stumble:0.01},
+  {name:"おっちょこちょい",speed:3.2,stumble:0.07},
+  {name:"のんびり",speed:1.8,stumble:0.005}
 ];
 
 function random(a){return a[Math.floor(Math.random()*a.length)];}
-
-function createCanvas(){
-  const c=document.createElement("canvas");
-  c.width=SIZE;
-  c.height=SIZE;
-  c.style.width=(SIZE*SCALE)+"px";
-  c.style.height=(SIZE*SCALE)+"px";
-  return c;
-}
-
+function createCanvas(){const c=document.createElement("canvas");c.width=SIZE;c.height=SIZE;c.style.width=(SIZE*SCALE)+"px";c.style.height=(SIZE*SCALE)+"px";return c;}
 function draw(ctx,data,color,stumble){
   ctx.clearRect(0,0,SIZE,SIZE);
-  if(stumble){
-    ctx.save();
-    ctx.translate(SIZE/2,SIZE/2);
-    ctx.rotate(Math.PI/2);
-    ctx.translate(-SIZE/2,-SIZE/2);
-  }
+  if(stumble){ctx.save();ctx.translate(SIZE/2,SIZE/2);ctx.rotate(Math.PI/6);ctx.translate(-SIZE/2,-SIZE/2);}
   for(let y=0;y<SIZE;y++){
     for(let x=0;x<SIZE;x++){
       if(data[y][x]===0) continue;
-      ctx.fillStyle=
-        data[y][x]===1?color:
-        data[y][x]===2?"#fff4dc":
-        data[y][x]===3?"#ffb6c1":"#000";
+      ctx.fillStyle=data[y][x]===1?color:data[y][x]===2?"#ffb6b6":data[y][x]===3?"#000":"#ffc107";
       ctx.fillRect(x,y,1,1);
     }
   }
   if(stumble) ctx.restore();
 }
 
-let racers=[];
-let raceInterval;
-let animInterval;
-let boostPower=0;
+let racers=[],raceInterval,animInterval,boostPower=0;
 
 function startRace(){
-  clearInterval(raceInterval);
-  clearInterval(animInterval);
-  document.getElementById("tracks").innerHTML="";
-  document.getElementById("result").innerText="";
-  racers=[];
-  boostPower=0;
-
-  const playerName=
-    document.getElementById("playerName").value || "あなたのハム";
-
+  clearInterval(raceInterval); clearInterval(animInterval);
+  document.getElementById("tracks").innerHTML=""; document.getElementById("result").innerText="";
+  racers=[]; boostPower=0;
+  const playerName=document.getElementById("playerName").value || "あなたのハム";
   for(let i=0;i<4;i++){
-    const track=document.createElement("div");
-    track.className="track";
-    const canvas=createCanvas();
-    const ctx=canvas.getContext("2d");
-
-    const personality=random(personalities);
-    const name=i===0?playerName:random(cpuNames);
-
-    track.innerHTML="<div>"+name+" ("+personality.name+")</div>";
-    track.appendChild(canvas);
+    const track=document.createElement("div"); track.className="track";
+    const canvas=createCanvas(); const ctx=canvas.getContext("2d");
+    const personality=random(personalities); const name=i===0?playerName:random(cpuNames);
+    track.innerHTML="<div>"+name+" ("+personality.name+")</div>"; track.appendChild(canvas);
     document.getElementById("tracks").appendChild(track);
-
-    racers.push({
-      name,personality,canvas,ctx,
-      pos:0,frame:0,stumble:false,
-      stumbleTimer:0,finished:false,
-      isPlayer:i===0,color:"#d8a45c"
-    });
+    racers.push({name,personality,canvas,ctx,pos:0,frame:0,stumble:false,stumbleTimer:0,finished:false,isPlayer:i===0,color:"#d8a45c"});
   }
-
   raceInterval=setInterval(updateRace,80);
   animInterval=setInterval(updateAnim,150);
 }
@@ -201,64 +109,25 @@ function startRace(){
 function updateRace(){
   racers.forEach(r=>{
     if(r.finished) return;
-
-    if(Math.random()<r.personality.stumble){
-      r.stumble=true;
-      r.stumbleTimer=8;
-      playBeep(200,0.1);
-    }
-
-    if(r.stumble){
-      r.stumbleTimer--;
-      if(r.stumbleTimer<=0) r.stumble=false;
-      return;
-    }
-
-    let base=r.personality.speed;
-    if(r.isPlayer){
-      base+=playerData.level*0.2;
-      base+=boostPower;
-    }
-
-    r.pos+=base;
-    r.canvas.style.left=r.pos+"px";
-
+    if(Math.random()<r.personality.stumble){r.stumble=true;r.stumbleTimer=8;playBeep(200,0.1);}
+    if(r.stumble){r.stumbleTimer--; if(r.stumbleTimer<=0) r.stumble=false; return;}
+    let base=r.personality.speed; if(r.isPlayer){base+=playerData.level*0.2; base+=boostPower;}
+    r.pos+=base; r.canvas.style.left=r.pos+"px";
     if(r.pos>window.innerWidth*0.75){
-      r.finished=true;
-      playBeep(800,0.2);
-
-      if(r.isPlayer){
-        playerData.exp+=10;
-        if(playerData.exp>=100){
-          playerData.exp=0;
-          playerData.level++;
-          playBeep(1200,0.3);
-        }
-        saveData();
-        updateStatus();
-      }
-
-      document.getElementById("result").innerText=
-        "🏆 優勝は "+r.name+"！";
+      r.finished=true; playBeep(800,0.2);
+      if(r.isPlayer){playerData.exp+=10; if(playerData.exp>=100){playerData.exp=0;playerData.level++; playBeep(1200,0.3);}
+        saveData(); updateStatus();}
+      document.getElementById("result").innerText="🏆 優勝は "+r.name+"！";
     }
   });
-
   boostPower*=0.9;
 }
 
 function updateAnim(){
-  racers.forEach(r=>{
-    if(r.finished) return;
-    r.frame=r.frame===0?1:0;
-    draw(r.ctx,r.frame===0?frameA:frameB,r.color,r.stumble);
-  });
+  racers.forEach(r=>{if(r.finished) return; r.frame=r.frame===0?1:0; draw(r.ctx,r.frame===0?frameA:frameB,r.color,r.stumble);});
 }
 
-function boost(){
-  boostPower+=2;
-  playBeep(600,0.1);
-}
+function boost(){boostPower+=2; playBeep(600,0.1);}
 </script>
-
 </body>
 </html>
