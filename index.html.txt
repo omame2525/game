@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タッチハンター</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#222">
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #222;
+  color: white;
+  text-align: center;
+}
+
+h1 { font-size: 6vw; margin: 10px; }
+
+#info {
+  display: flex;
+  justify-content: space-around;
+  font-size: 4vw;
+  margin-bottom: 10px;
+}
+
+#gameArea {
+  position: relative;
+  width: 95vw;
+  height: 60vh;
+  margin: auto;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.target {
+  position: absolute;
+  width: 14vw;
+  height: 14vw;
+  background: crimson;
+  border-radius: 50%;
+}
+
+button {
+  font-size: 5vw;
+  padding: 10px 20px;
+  margin: 10px;
+  border-radius: 10px;
+  border: none;
+}
+</style>
+</head>
+<body>
+
+<h1>🎯 タッチハンター</h1>
+
+<div id="info">
+  <div>スコア: <span id="score">0</span></div>
+  <div>残り: <span id="time">30</span></div>
+  <div>Lv: <span id="level">1</span></div>
+</div>
+
+<div id="gameArea"></div>
+
+<div>
+  <button onclick="startGame()">スタート</button>
+</div>
+
+<div>🏆 ハイスコア: <span id="highScore">0</span></div>
+
+<script>
+let score = 0;
+let time = 30;
+let level = 1;
+let spawnSpeed = 1000;
+let gameInterval;
+let timerInterval;
+
+const hitSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+
+document.getElementById("highScore").textContent =
+  localStorage.getItem("highScore") || 0;
+
+function startGame() {
+  score = 0;
+  time = 30;
+  level = 1;
+  spawnSpeed = 1000;
+
+  updateUI();
+
+  clearInterval(gameInterval);
+  clearInterval(timerInterval);
+
+  gameInterval = setInterval(createTarget, spawnSpeed);
+  timerInterval = setInterval(countDown, 1000);
+}
+
+function countDown() {
+  time--;
+  document.getElementById("time").textContent = time;
+
+  if (time <= 0) {
+    endGame();
+  }
+}
+
+function createTarget() {
+  const gameArea = document.getElementById("gameArea");
+  const target = document.createElement("div");
+  target.className = "target";
+
+  const size = gameArea.clientWidth * 0.14;
+  const maxX = gameArea.clientWidth - size;
+  const maxY = gameArea.clientHeight - size;
+
+  target.style.left = Math.random() * maxX + "px";
+  target.style.top = Math.random() * maxY + "px";
+
+  target.addEventListener("touchstart", hit);
+  target.addEventListener("click", hit);
+
+  gameArea.appendChild(target);
+
+  setTimeout(() => {
+    if (gameArea.contains(target)) {
+      gameArea.removeChild(target);
+    }
+  }, spawnSpeed - 200);
+}
+
+function hit(e) {
+  e.preventDefault();
+  score++;
+  hitSound.play();
+  this.remove();
+
+  if (score % 10 === 0) {
+    level++;
+    spawnSpeed *= 0.85;
+    clearInterval(gameInterval);
+    gameInterval = setInterval(createTarget, spawnSpeed);
+  }
+
+  updateUI();
+}
+
+function updateUI() {
+  document.getElementById("score").textContent = score;
+  document.getElementById("level").textContent = level;
+}
+
+function endGame() {
+  clearInterval(gameInterval);
+  clearInterval(timerInterval);
+
+  const highScore = localStorage.getItem("highScore") || 0;
+
+  if (score > highScore) {
+    localStorage.setItem("highScore", score);
+    document.getElementById("highScore").textContent = score;
+    alert("🎉 新記録！");
+  } else {
+    alert("ゲーム終了！");
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+</body>
+</html>
